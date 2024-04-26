@@ -26,7 +26,8 @@
 // #include "lv_drivers/indev/mouse.h"
 // #include "lv_drivers/indev/keyboard.h"
 // #include "lv_drivers/indev/mousewheel.h"
-
+#include "contacts_view.h"
+// #include "call_log.h"
 /*********************
  *      DEFINES
  *********************/
@@ -49,8 +50,7 @@ static pthread_t thr_tick;    /* thread */
 static bool end_tick = false; /* flag to terminate thread */
 
 
-extern lv_obj_t *tab2;
-extern lv_obj_t *tab1;
+// lv_obj_t *tab3;
 
 void tabs(void)
 {
@@ -58,17 +58,14 @@ void tabs(void)
 	lv_obj_t *tabview;
 	tabview = lv_tabview_create(lv_scr_act(), LV_DIR_BOTTOM, 70);
 	/*Add 3 tabs (the tabs are page (lv_page) and can be scrolled*/
-	tab1 = lv_tabview_add_tab(tabview, "Contacts");
-	tab2 = lv_tabview_add_tab(tabview, "Call Log");
-	lv_obj_t *tab3 = lv_tabview_add_tab(tabview, "Keypad");
-
+	lv_obj_t *tab1 = lv_tabview_add_tab(tabview, "Contacts");
+	lv_obj_t* tab2 = lv_tabview_add_tab(tabview, "Call Log");
+	lv_obj_t* tab3 = lv_tabview_add_tab(tabview, "Keypad");
 	contacts(tab1);
 	call_log(tab2);
 	keypad(tab3);
 
 }
-
-
 
 int main(int argc, char **argv)
 {
@@ -77,6 +74,7 @@ int main(int argc, char **argv)
 
   /*Initialize LVGL*/
   lv_init();
+  // lv_tick_init();
 
   /*Initialize the HAL (display, input devices, tick) for LVGL*/
   hal_init();

@@ -2,180 +2,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "contacts_view.h"
-extern void event_handler(lv_event_t *e);
-extern void event_handler_up(lv_event_t *e);
-extern void event_handler_dn(lv_event_t *e);
-void float_clear_cb(lv_event_t *e);
-
-lv_obj_t *call_log_menu;
-
-lv_obj_t *currentButton = NULL;
-extern lv_obj_t *tab2;
-
-int count_calllog = 0;
-
-typedef struct
-{
-    char *name; // Contact name
-    char *time; // Time of call
-} CallLogEntry;
-
-typedef struct CallLogNode
-{
-    CallLogEntry data;        // Data of the node
-    struct CallLogNode *next; // Pointer to the next node
-} CallLogNode;
-
-CallLogNode *callLogHead = NULL;
-
-void addToCallLog(const char *name, const char *time)
-{
-    CallLogNode *newNode = (CallLogNode *)malloc(sizeof(CallLogNode));
-    if (newNode == NULL)
-    {
-        fprintf(stderr, "Memory allocation failed\n");
-        // Handle memory allocation failure
-        return;
-    }
-    newNode->data.name = strdup(name);
-    // newNode->data.number = strdup(number);
-    newNode->data.time = strdup(time);
-
-    newNode->next = NULL;
-    // newNode->next = callLogHead;  // Set the next pointer of the new node to the current head
-    // callLogHead = newNode;
-
-    // no_of_contacts(newNode, name);
-
-    CallLogNode *curr = callLogHead;
-
-    if (callLogHead == NULL || strcmp(name, callLogHead->data.name) < 0)
-    {
-        printf("List is empty\n");
-
-        newNode->next = callLogHead;
-        callLogHead = newNode;
-        count_calllog++;
-        printf("Number of call logs :%d \n", count_calllog);
-        return;
-    }
-
-    while (curr->next != NULL && (strcmp(name, curr->next->data.name) > 0))
-    {
-        curr = curr->next;
-    }
-
-    newNode->next = curr->next;
-    curr->next = newNode;
-    count_calllog++;
-
-    printf("Number of call logs :%d \n", count_calllog);
-}
-
-void freeCallLog()
-{
-    CallLogNode *current = callLogHead;
-    CallLogNode *next;
-    while (current != NULL)
-    {
-        next = current->next;
-        free(current->data.name);
-        // free(current->data.number);
-        free(current->data.time);
-        free(current);
-        current = next;
-    }
-    callLogHead = NULL; // Reset the head pointer
-}
-
-void no_of_contacts(CallLogNode *newNode, const char *name)
-{
-    CallLogNode *curr = callLogHead;
-
-    if (callLogHead == NULL || strcmp(name, callLogHead->data.name) < 0)
-    {
-        printf("List is empty\n");
-
-        newNode->next = callLogHead;
-        callLogHead = newNode;
-        count_calllog++;
-        return;
-    }
-
-    while (curr->next != NULL && (strcmp(name, curr->next->data.name) > 0))
-    {
-        curr = curr->next;
-    }
-
-    newNode->next = curr->next;
-    curr->next = newNode;
-    count_calllog++;
-    return;
-}
+#include "call_log_model.h"
+#include "contacts_controllers.h"
+#include "scrolling_handler.h"
+#include "Dialer.h"
+#include "list_operations.h"
+static lv_obj_t *call_log_menu;
 
 
-int dialer_screen(lv_obj_t* parent, CallLogNode *dat)
-{
-    // lv_obj_t * mbox1 = lv_obj_create(parent);
-    lv_obj_t* mbox1 = lv_msgbox_create(parent, dat->data.name, dat->data.time, NULL, false);
-
-    // lv_msgbox_add_title(mbox1, "Hello");
-
-    // lv_msgbox_add_text(mbox1, "This is a message box with two buttons.");
-    // lv_msgbox_add_close_button(mbox1);
-
-    return;
-}
-
-void createCallogLabels(lv_obj_t *parent)
-{
-    // CallLogNode *currentNode = callLogHead;
-    printf("inside create call log Labels\r\n");
-    // printContactList();
-    // bubbleSort();
-
-    CallLogNode *current = callLogHead;
-    // if(count_calllog>0)
-    // printf("CALL LOG HEAD: %d\n", current->data.name);
-    int index = 0;
-    lv_obj_t *cont;
-    lv_obj_t *label;
-    lv_obj_t *sub_page[count_calllog];
-
-    while (current != NULL && index <= count)
-    {
-
-        printf("Creating sub pages\n");
-
-        sub_page[index] = lv_menu_page_create(call_log_menu, current->data.name);
-        printf("Sub page created\n");
-        cont = lv_menu_cont_create(sub_page[index]);
-        lv_obj_set_size(cont, 744, 310);
-        dialer_screen(cont, current);
-
-        printf("Profile successfully created\n");
-        cont = lv_menu_cont_create(parent);
-        // Create an LVGL label for each contact name
-        lv_obj_t *label = lv_label_create(cont);
-        lv_label_set_text(label, current->data.name);
-        lv_obj_set_user_data(label, current);
-        lv_menu_set_load_page_event(parent, cont, sub_page[index]);
-
-        lv_obj_add_event_cb(cont, event_handler, LV_EVENT_CLICKED, NULL);
-
-        current = current->next;
-        if (index == 0)
-        {
-            current = cont;
-            lv_obj_add_state(current, LV_STATE_CHECKED);
-        }
-        index++;
-    }
-    printf("outside createContactLabels\r\n");
-}
 
 void call_log(lv_obj_t *parent)
 {
+
+    set_call_log_tab(parent);
+
+
+    int *flag = 0;
+    printf("flag = %d\n",flag);
+    int call_log_count = get_call_log_count();
+    printf("No. of call logs:%d\n", call_log_count);
     static lv_style_t style2;
     lv_obj_t *main_page;
     lv_style_init(&style2);
@@ -196,70 +41,29 @@ void call_log(lv_obj_t *parent)
     lv_obj_t *cont;
     lv_obj_t *label;
 
-    lv_obj_t *sub_page;
+    lv_obj_t *sub_page[call_log_count];
 
-    lv_obj_t *back_btn = lv_menu_get_main_header_back_btn(call_log_menu);
-    lv_obj_t *back_button_label = lv_label_create(back_btn);
-    lv_obj_align(back_button_label, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_add_style(back_btn, &style2, 0);
-
-    lv_label_set_text(back_button_label, "Back");
+    
+    CallLogNode *currentNode = (CallLogNode*)create_node(CALL_LOG_NODE);
+    currentNode = get_head();
     main_page = lv_menu_page_create(call_log_menu, NULL);
 
-    CallLogNode *currentNode = callLogHead;
-
-    // if(count_calllog>0)
-    // createCallogLabels(main_page);
-
-    // while(currentNode != NULL && index<= count_calllog)
-    // {
-    //     sub_page[index] = lv_menu_page_create(call_log_menu, currentNode->data.name);
-    //     cont = lv_menu_cont_create(sub_page[index]);
-    //     lv_obj_set_size(cont, 744, 310);
-    //     create_contact_profile(cont, currentNode);
-
-    //     cont = lv_menu_cont_create(parent);
-    //     lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_BOTTOM,0);
-
-    //     label = lv_label_create(cont);
-    // 	lv_label_set_text(label, currentNode->data.name);
-
-    // 	lv_obj_t *label2 = lv_label_create(cont);
-    // 	lv_label_set_text(label2, currentNode->data.time);
-    // 	lv_obj_align(label2, LV_ALIGN_CENTER,0,0);
-
-    //     lv_menu_set_load_page_event(call_log_menu, cont, sub_page[index]);
-
-    //     // lv_obj_add_event_cb(cont, event_handler2, LV_EVENT_CLICKED, NULL);
-
-    //     currentNode = currentNode->next;
-    //     if (callLogHead != NULL && currentNode == callLogHead)
-    //     {
-    //         currentButton = cont;
-    //         lv_obj_add_state(currentButton, LV_STATE_CHECKED);
-    //     }
-    //     index++;
-
-    // currentNode = currentNode->next;
-    // }
-
-    while (currentNode != NULL)
+    while (currentNode != NULL && inx<=call_log_count)
     {
 
-        sub_page = lv_menu_page_create(call_log_menu, currentNode->data.name);
-        cont = lv_menu_cont_create(sub_page);
+        sub_page[inx] = lv_menu_page_create(call_log_menu, currentNode->data.name);
+        cont = lv_menu_cont_create(sub_page[inx]);
         lv_obj_set_size(cont, 744, 310);
-        // create_contact_profile(cont, currentNode);
+
+        lv_obj_t *profile_cont = lv_obj_create(cont);
+	    lv_obj_set_size(profile_cont, 700, 480);
+	    lv_obj_set_style_border_color(profile_cont, lv_color_white(), LV_PART_MAIN);
+	
+        dialer_screen(profile_cont, currentNode->data.name, 1);
 
         printf("Profile successfully created\n");
 
         cont = lv_menu_cont_create(parent);
-        // Create an LVGL label for each contact name
-        lv_obj_t *label = lv_label_create(cont);
-        lv_label_set_text(label, currentNode->data.name);
-        lv_obj_set_user_data(label, currentNode);
-        lv_menu_set_load_page_event(call_log_menu, cont, sub_page);
-
         cont = lv_menu_cont_create(main_page);
         lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_BOTTOM, 0);
 
@@ -270,15 +74,37 @@ void call_log(lv_obj_t *parent)
         lv_obj_t *label2 = lv_label_create(cont);
         lv_label_set_text(label2, currentNode->data.time);
         lv_obj_align(label2, LV_ALIGN_CENTER, 0, 0);
+        lv_menu_set_load_page_event(call_log_menu, cont, sub_page[inx]);
 
-        if (callLogHead != NULL && currentNode == callLogHead)
+        CallLogNode* head = (CallLogNode*)create_node(CALL_LOG_NODE);
+        head = get_head();
+
+        // printf("Before highlighting node in call log entry\n");
+
+        lv_obj_t* current;
+
+        if (head != NULL && currentNode == head)
         {
-            currentButton = cont;
-            lv_obj_add_state(currentButton, LV_STATE_CHECKED);
+            
+            // currentButton = cont;
+
+            // if(cont==NULL)
+            // {
+            //     printf("NULL OBJECT IS BEING ASSIGNED\n");
+            // }
+            set_Current_Button(cont);
+
+            current = get_Current_Button();
+            
+            lv_obj_add_state(current, LV_STATE_CHECKED);
+            // printf("State of particular call log entry is highlighted\n");
+
+            
         }
 
-        // inx++;
+        inx++;
         currentNode = currentNode->next;
+        // free(head);
     }
 
     lv_menu_set_page(call_log_menu, main_page);
@@ -297,7 +123,7 @@ void call_log(lv_obj_t *parent)
     lv_obj_align(btn, LV_ALIGN_CENTER, 0, 0);
     lv_obj_align(label2, LV_ALIGN_CENTER, 0, 0);
 
-    lv_obj_add_event_cb(btn, event_handler_up, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(btn, event_handler_up, LV_EVENT_ALL, flag);
 
     lv_group_remove_obj(btn);
 
@@ -315,7 +141,7 @@ void call_log(lv_obj_t *parent)
     lv_obj_align(btn, LV_ALIGN_CENTER, 0, 0);
     lv_obj_align(label2, LV_ALIGN_CENTER, 0, 0);
 
-    lv_obj_add_event_cb(btn, event_handler_dn, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(btn, event_handler_dn, LV_EVENT_ALL, flag);
     lv_group_remove_obj(btn);
 
     /*Create floating btn*/
@@ -328,4 +154,10 @@ void call_log(lv_obj_t *parent)
     lv_obj_set_style_bg_color(float_btn2, lv_palette_main(LV_PALETTE_RED), 0);
     lv_obj_set_style_bg_img_src(float_btn2, LV_SYMBOL_TRASH, 0);
     lv_obj_set_style_text_font(float_btn2, lv_theme_get_font_large(float_btn2), 0);
+
+    // free(currentNode);
+
+
 }
+
+

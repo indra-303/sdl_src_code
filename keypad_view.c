@@ -1,22 +1,30 @@
 #include "lvgl/lvgl.h"
+#include "keypad_view.h"
 
-lv_obj_t* screen;
-lv_obj_t *tab2;
-
-extern char *contacts_info[][3];
+// lv_obj_t *tab2;
+static lv_obj_t* keypad_tab;
 
 static void modal_event_cb(lv_event_t *e);
-
 static void msgbox_event_handler(lv_event_t *e);
-
 void btn_event_cb(lv_event_t * e);
+
+void set_keypad_tab(lv_obj_t* obj_tab)
+{
+    keypad_tab = &(*obj_tab);  
+}
+lv_obj_t* get_keypad_tab()
+{
+    return keypad_tab;
+}
 
 /*Keypad UI*/
 void keypad(lv_obj_t *parent)
 {
 
+    set_keypad_tab(parent);
+
 	//base screen, common for text area as well as keypad
-	screen = lv_obj_create(parent);
+	lv_obj_t *screen = lv_obj_create(parent);
 	lv_obj_set_size(screen, 798, 405);
 	lv_obj_align(screen, LV_ALIGN_TOP_MID, 0, -25);
 	lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE); 
@@ -31,9 +39,9 @@ void keypad(lv_obj_t *parent)
     // lv_obj_set_style_transform_angle(ta, 2700, 0);
     // lv_obj_set_style_margin_left(ta, 50, 0);
 
-	  uint32_t i;
-	  const int num_rows = 4 ;
-	  const int num_cols = 3;
+	uint32_t i;
+	const int num_rows = 4 ;
+	const int num_cols = 3;
     const int btn_width = 100; // Adjust button size as needed
     const int btn_height = 55;
     int count = 0;
@@ -46,9 +54,6 @@ void keypad(lv_obj_t *parent)
     lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE); 
 
 
-    /* This loop creates buttons, add labels to each button
-    	and aligns buttons
-    */
     for (int row = 0; row < num_rows; ++row) {
     	for (int col = 0; col < num_cols; ++col) {
     		lv_obj_t * btn = lv_btn_create(cont);

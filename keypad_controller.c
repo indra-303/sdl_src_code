@@ -1,12 +1,9 @@
 #include "lvgl/lvgl.h"
 #include "contacts_model.h"
-#include <time.h>
-
-extern lv_obj_t* screen;
-extern lv_obj_t *tab2;
-
-
-
+#include "keypad_controller.h"
+#include "Dialer.h"
+#include "call_log_model.h"
+#include "list_operations.h"
 static void modal_event_cb(lv_event_t *e)
 {
 	printf("Inside clearing call event!\r\n");
@@ -24,20 +21,24 @@ static void msgbox_event_handler(lv_event_t *e)
 }
 
 void calling_display(lv_obj_t* parent, lv_obj_t* modal, lv_obj_t* ta, char *text) {
-    
+        uint32_t tick_count = lv_tick_get();
+		// Convert milliseconds to hours, minutes, and seconds
+		uint32_t seconds = tick_count * 5 / 1000;
+		uint32_t hours = seconds / 3600;
+		uint32_t minutes = (seconds % 3600) / 60;
+		uint32_t secs = seconds % 60;
 
-				static lv_style_t style_msgbox;
-				lv_style_init(&style_msgbox);
-				// lv_style_set_text_font(&style_msgbox, LV_STATE_DEFAULT, &lv_font_montserrat_20);
-				lv_style_set_text_color(&style_msgbox,  lv_color_black());
-				lv_style_set_bg_color(&style_msgbox,  lv_palette_main(LV_PALETTE_YELLOW));
-				// lv_style_set_margin_left(&style_msgbox, 50);
-			    lv_style_set_text_align(&style_msgbox,  LV_ALIGN_CENTER);
+		// Format time string in 12-hour format
+		uint32_t hour_12 = hours % 12;
+		char am_pm = (hours < 12) ? 'A' : 'P';
+		if (hour_12 == 0) hour_12 = 12; // Handle midnight (12 AM)
+
+				
 
             	lv_obj_t* f_btn;
-				static const char * btns[] = {LV_SYMBOL_CLOSE, LV_SYMBOL_MUTE, LV_SYMBOL_VOLUME_MAX, ""};
+				static const char * btns[] = {""};
 				if(strlen(text)==0){
-					modal = lv_msgbox_create(parent, text, LV_SYMBOL_WARNING "Invalid Input!", btns, false);
+					modal = lv_msgbox_create(parent, text, LV_SYMBOL_WARNING "Invalid Input!", btns, true);
 					lv_obj_t * txt = lv_msgbox_get_text(modal);
 					lv_obj_set_style_text_color(txt, lv_color_make(0xff,0x00,0x00),0);
 					// lv_obj_set_style_margin_top(modal, 50,0);
@@ -45,7 +46,7 @@ void calling_display(lv_obj_t* parent, lv_obj_t* modal, lv_obj_t* ta, char *text
 				else{
 					const char* contact = text;
 
-					ListNode *current = contactList;
+					ListNode *current = get_contacts_head();
 					while (current != NULL) {
 						if(strcmp(text, current->data.number)==0)
 						{
@@ -54,15 +55,22 @@ void calling_display(lv_obj_t* parent, lv_obj_t* modal, lv_obj_t* ta, char *text
 							current = current->next;
 					}
 					
-					time_t current_time;
-    				time(&current_time);
-					
-					char time_str[20]; // Adjust the size as needed
-    				strftime(time_str, sizeof(time_str), "%H:%M", localtime(&current_time)); 
 
-					modal = lv_msgbox_create(parent, contact, "Calling ...", btns, false);
+					char time_str[20]; // Adjust the size as needed
+    			    sprintf(time_str, "%02d:%02d %cM", hour_12, minutes, am_pm);
+					lv_obj_t *child_ta = lv_obj_get_child(parent, 0);
+					lv_obj_t *child_keypad = lv_obj_get_child(parent, 1);
+					// modal = lv_msgbox_create(parent, contact, "Calling ...", btns, false);
+					lv_obj_add_flag(child_ta, LV_OBJ_FLAG_HIDDEN);					
+					lv_obj_add_flag(child_keypad, LV_OBJ_FLAG_HIDDEN);
+
+					dialer_screen(parent, contact, 3);
                    	addToCallLog(contact, time_str);
-                    call_log(tab2);
+					// call_log_info str;
+					// str.contact = contact;
+					// str.time = &time_str;
+					// add_to_list(&str, CALL_LOG_NODE);
+                    call_log(get_call_log_tab());
                     // lv_textarea_set_text(ta, "Calling ...");
 				}
 	            lv_obj_set_size(modal, 300, 350);
@@ -70,11 +78,11 @@ void calling_display(lv_obj_t* parent, lv_obj_t* modal, lv_obj_t* ta, char *text
 	            lv_obj_set_style_text_align(modal, LV_ALIGN_CENTER,0);
 
 	    		
-	    		lv_obj_t* btn = lv_msgbox_get_btns(modal);
+	    		// lv_obj_t* btn = lv_msgbox_get_btns(modal);
 	    		// lv_obj_set_style_margin_top(btn, 100, NULL);
 	    		// lv_obj_set_style_margin_left(btn, 60, NULL);
-				lv_obj_add_event_cb(btn, msgbox_event_handler, LV_EVENT_CLICKED, NULL);
-	    		lv_obj_add_event_cb(modal, modal_event_cb, LV_EVENT_DELETE, ta);
+				// lv_obj_add_event_cb(btn, msgbox_event_handler, LV_EVENT_CLICKED, NULL);
+	    		// lv_obj_add_event_cb(modal, modal_event_cb, LV_EVENT_DELETE, ta);
 
 
 }
@@ -85,6 +93,7 @@ void btn_event_cb(lv_event_t * e)
 	int count = 0;
 	lv_event_code_t code = lv_event_get_code(e);
 	lv_obj_t * btn = lv_event_get_target(e);
+	lv_obj_t* screen = lv_obj_get_parent(lv_obj_get_parent(btn));
 	lv_obj_t * ta = lv_event_get_user_data(e);
 
 	lv_obj_set_size(ta, 450, 70);
